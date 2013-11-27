@@ -638,6 +638,13 @@ class LinuxHardware(Hardware):
                 else:
                     self.facts[k] = 'NA'
 
+        # fix up any unserializable values
+        for k in DMI_DICT.keys():
+            try:
+                json.dumps(self.facts[k])
+            except UnicodeDecodeError:
+                self.facts[k] = "NA"
+
     def get_mount_facts(self):
         self.facts['mounts'] = []
         mtab = get_file_content('/etc/mtab', '')
