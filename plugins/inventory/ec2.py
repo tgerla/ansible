@@ -253,6 +253,11 @@ class Ec2Inventory(object):
         else:
             self.nested_groups = False
 
+        if config.has_option('ec2', 'hostname_tag_map'):
+            self.hostname_tag_map = config.get('ec2', 'hostname_tag_map')
+        else:
+            self.hostname_tag_map = None
+
         # Do we need to just include hosts that match a pattern?
         try:
             pattern_include = config.get('ec2', 'pattern_include')
@@ -384,10 +389,16 @@ class Ec2Inventory(object):
             return
 
         # Select the best destination address
+        realIp = None
         if instance.subnet_id:
             dest = getattr(instance, self.vpc_destination_variable)
         else:
             dest =  getattr(instance, self.destination_variable)
+
+        # if 'hostname_tag_map' exists as a tag, use that as our hostname instead of the IP
+        if self.hostname_tag_map and self.hostname_tag_map in instance.tags:
+            realIp = dest
+	    dest = instance.tags[self.hostname_tag_map]
 
         if not dest:
             # Skip instances we cannot address (e.g. private VPC subnet)
@@ -474,6 +485,9 @@ class Ec2Inventory(object):
 
         self.inventory["_meta"]["hostvars"][dest] = self.get_host_info_dict_from_instance(instance)
 
+        # if we're using a human-readable FQDN, set ansible_ssh_host
+        if realIp:
+            self.inventory["_meta"]["hostvars"][dest]['ansible_ssh_host'] = realIp
 
     def add_rds_instance(self, instance, region):
         ''' Adds an RDS instance to the inventory and index, as long as it is
