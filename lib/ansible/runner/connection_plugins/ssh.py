@@ -276,11 +276,8 @@ class Connection(object):
         stderr = ''
         rpipes = [p.stdout, p.stderr]
         if in_data:
-            try:
-                stdin.write(in_data)
-                stdin.close()
-            except:
-                raise errors.AnsibleError('SSH Error: data could not be sent to the remote host. Make sure this host can be reached over ssh')
+            stdin.write(in_data)
+            stdin.close()
         while True:
             rfd, wfd, efd = select.select(rpipes, [], rpipes, 1)
 
